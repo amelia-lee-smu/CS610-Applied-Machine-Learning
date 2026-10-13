@@ -12,10 +12,7 @@ from utilities.values import *
 class DatasetPreprocessor:
     '''
     Functions to process datetime.
-    Note:
-    - no missing dates, so not handled
-    - for date features, string values are returned, so that they are categorical values
-    - is_public_holiday returns 1 for True, 0 for False
+    Note: no missing dates, so not handled
     '''
     def __init__(self):
         # get US public holidays
@@ -43,16 +40,16 @@ class DatasetPreprocessor:
         return datetime_value.date()
 
     def to_month_of_year(self, datetime_value):
-        return str(datetime_value.month)
+        return datetime_value.month
 
     def to_week_of_year(self, datetime_value):
-        return str(datetime_value.isocalendar().week)
+        return datetime_value.isocalendar().week
 
     def to_day_of_week(self, datetime_value):
-        return str(datetime_value.dayofweek)
+        return datetime_value.dayofweek
 
     def to_hour_of_day(self, datetime_value):
-        return str(datetime_value.hour)
+        return datetime_value.hour
 
     def to_is_public_holiday(self, datetime_value):
         return 1 if datetime_value in self.holidays else 0
