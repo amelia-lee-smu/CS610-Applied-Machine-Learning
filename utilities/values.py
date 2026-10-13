@@ -2,14 +2,15 @@ HISTORICAL_WEATHER_URL = "https://archive-api.open-meteo.com/v1/archive"
 NYC_TIMEZONE = "America/New_York"
 
 # prediction 
-NUM_RENTALS = 'number_of_rentals' # target variable
+NUM_RENTALS = 'num_rentals' # target variable
 
 # location features:
 STATION = "start station name"
 
 # date features:
 DATE = 'date'
-MONTH_OF_YEAR = 'month_of_year'
+YEAR = 'year'
+MONTH = 'month'
 WEEK_OF_YEAR = 'week_of_year'
 DAY_OF_WEEK = 'day_of_week'
 HOUR_OF_DAY = 'hour_of_day'

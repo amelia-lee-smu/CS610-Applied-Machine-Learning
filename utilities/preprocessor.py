@@ -39,7 +39,10 @@ class DatasetPreprocessor:
     def to_date(self, datetime_value):
         return datetime_value.date()
 
-    def to_month_of_year(self, datetime_value):
+    def to_year(self, datetime_value):
+            return datetime_value.year
+
+    def to_month(self, datetime_value):
         return datetime_value.month
 
     def to_week_of_year(self, datetime_value):
