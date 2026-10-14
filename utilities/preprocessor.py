@@ -36,26 +36,28 @@ class DatasetPreprocessor:
                 
         return df
 
+    # date extraction functions that require datetime
     def to_date(self, datetime_value):
         return datetime_value.date()
-
-    def to_year(self, datetime_value):
-            return datetime_value.year
-
-    def to_month(self, datetime_value):
-        return datetime_value.month
-
-    def to_week_of_year(self, datetime_value):
-        return datetime_value.isocalendar().week
-
-    def to_day_of_week(self, datetime_value):
-        return datetime_value.dayofweek
 
     def to_hour_of_day(self, datetime_value):
         return datetime_value.hour
 
-    def to_is_public_holiday(self, datetime_value):
-        return 1 if datetime_value in self.holidays else 0
+    # date extraction functions that require date
+    def to_year(self, date_value):
+        return date_value.year
+
+    def to_month(self, date_value):
+        return date_value.month
+
+    def to_week_of_year(self, date_value):
+        return date_value.isocalendar().week
+
+    def to_day_of_week(self, date_value):
+        return date_value.weekday()
+
+    def to_is_public_holiday(self, date_value):
+        return 1 if date_value in self.holidays else 0
 
     def get_hourly_weather(self, params):
         # unpack params
