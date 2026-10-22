@@ -218,3 +218,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+# generated files that are too large for GitHub
+data/processed/*.pkl
+.cache.sqlite
