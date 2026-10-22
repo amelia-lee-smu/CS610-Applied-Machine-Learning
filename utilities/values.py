@@ -9,7 +9,6 @@ STATION = "start station name"
 
 # date features:
 DATE = 'date'
-YEAR = 'year'
 MONTH = 'month'
 WEEK_OF_YEAR = 'week_of_year'
 DAY_OF_WEEK = 'day_of_week'

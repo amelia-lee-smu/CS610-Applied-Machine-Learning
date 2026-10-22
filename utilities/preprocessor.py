@@ -5,6 +5,7 @@ import openmeteo_requests
 import pandas as pd
 import requests_cache
 from retry_requests import retry
+from sklearn import preprocessing
 
 from utilities.values import *
 
@@ -22,6 +23,10 @@ class DatasetPreprocessor:
         cache_session = requests_cache.CachedSession('.cache', expire_after = -1)
         retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
         self.openmeteo = openmeteo_requests.Client(session = retry_session)
+
+        # one-hot encoder and scaler
+        self.ohe = preprocessing.OneHotEncoder(drop='first', handle_unknown='ignore', sparse_output=False)
+        self.scaler = preprocessing.StandardScaler()
 
     def read_all_files_in_dir(self, dir_paths):
         df = pd.DataFrame()
@@ -42,10 +47,6 @@ class DatasetPreprocessor:
 
     def to_hour_of_day(self, datetime_value):
         return datetime_value.hour
-
-    # date extraction functions that require date
-    def to_year(self, date_value):
-        return date_value.year
 
     def to_month(self, date_value):
         return date_value.month
@@ -116,3 +117,28 @@ class DatasetPreprocessor:
         hourly_data_df[LONGITUDE] = longitude
 
         return hourly_data_df
+
+    def fit_one_hot_encoder(self, features):
+        self.ohe.fit(features)
+
+    # do one hot encoding on categorical columns
+    def get_encoded_features_df(self, df, categorical_cols, non_categorical_cols):
+        non_categorical_features = df[non_categorical_cols]
+        categorical_features = pd.DataFrame(
+            self.ohe.transform(df[categorical_cols]),
+            columns=self.ohe.get_feature_names_out(categorical_cols),
+            index=df.index,
+        )
+        combined_features_df = pd.concat([categorical_features, non_categorical_features], axis=1)
+        return combined_features_df
+
+    def fit_scaler(self, df):
+        self.scaler.fit(df)
+
+    def get_scaled_features(self, df):
+        scaled_df = pd.DataFrame(
+            self.scaler.transform(df),
+            columns=self.scaler.get_feature_names_out(),
+            index=df.index,
+        )
+        return scaled_df
