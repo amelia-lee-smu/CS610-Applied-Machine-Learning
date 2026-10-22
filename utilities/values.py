@@ -9,8 +9,9 @@ STATION = "start station name"
 
 # date features:
 DATE = 'date'
-MONTH = 'month'
 WEEK_OF_YEAR = 'week_of_year'
+SINE_WEEK_OF_YEAR = 'sine_week_of_year'
+COSINE_WEEK_OF_YEAR = 'cosine_week_of_year'
 DAY_OF_WEEK = 'day_of_week'
 HOUR_OF_DAY = 'hour_of_day'
 IS_PUBLIC_HOLIDAY = 'is_public_holiday'

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import holidays
+import numpy as np
 import openmeteo_requests
 import pandas as pd
 import requests_cache
@@ -8,51 +9,49 @@ from retry_requests import retry
 from sklearn import preprocessing
 
 from utilities.values import *
+from utilities.utilities import *
+
+def read_all_files_in_dir(dir_paths):
+    '''Reads all the csv files in a list of directories.'''
+    df = pd.DataFrame()
+    for dir in dir_paths:
+        # get all file names in the dir
+        raw_files = [f for f in Path(dir).iterdir() if f.is_file()]
+
+        # read and merge the files
+        for file in raw_files: 
+            curr_data = pd.read_csv(file)
+            df = pd.concat([df, curr_data])
+            
+    return df
 
 
-class DatasetPreprocessor:
+class DateFeatureExtractor:
     '''
-    Functions to process datetime.
-    Note: no missing dates, so not handled
+    Functions to process the datetime feature.
     '''
     def __init__(self):
         # get US public holidays
         self.holidays = holidays.US()
 
-        # Open-Meteo API client with cache and retry on error
-        cache_session = requests_cache.CachedSession('.cache', expire_after = -1)
-        retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
-        self.openmeteo = openmeteo_requests.Client(session = retry_session)
+        self.max_weeks_in_year = 53
 
-        # one-hot encoder and scaler
-        self.ohe = preprocessing.OneHotEncoder(drop='first', handle_unknown='ignore', sparse_output=False)
-        self.scaler = preprocessing.StandardScaler()
-
-    def read_all_files_in_dir(self, dir_paths):
-        df = pd.DataFrame()
-        for dir in dir_paths:
-            # get all file names in the dir
-            raw_files = [f for f in Path(dir).iterdir() if f.is_file()]
-
-            # read and merge the files
-            for file in raw_files: 
-                curr_data = pd.read_csv(file)
-                df = pd.concat([df, curr_data])
-                
-        return df
-
-    # date extraction functions that require datetime
     def to_date(self, datetime_value):
         return datetime_value.date()
 
     def to_hour_of_day(self, datetime_value):
         return datetime_value.hour
 
-    def to_month(self, date_value):
-        return date_value.month
-
     def to_week_of_year(self, date_value):
         return date_value.isocalendar().week
+
+    def to_sine_week_of_year(self, week_of_year):
+        week_angle = 2 * np.pi * (week_of_year - 1) / self.max_weeks_in_year
+        return np.sin(week_angle)
+    
+    def to_cosine_week_of_year(self, week_of_year):
+        week_angle = 2 * np.pi * (week_of_year - 1) / self.max_weeks_in_year
+        return np.cos(week_angle)
 
     def to_day_of_week(self, date_value):
         return date_value.weekday()
@@ -60,13 +59,27 @@ class DatasetPreprocessor:
     def to_is_public_holiday(self, date_value):
         return 1 if date_value in self.holidays else 0
 
-    def get_hourly_weather(self, params):
-        # unpack params
-        start_date, end_date, station, latitude, longitude = params[START_DATE], params[END_DATE], params[STATION], params[LATITUDE], params[LONGITUDE]
 
+class WeatherFeatureExtractor:
+    '''
+    Functions to call the weather API and process the results.
+    '''
+    def __init__(self, start_date, end_date):
+        # Open-Meteo API client with cache and retry on error
+        cache_session = requests_cache.CachedSession('.cache', expire_after = -1)
+        retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
+        self.openmeteo = openmeteo_requests.Client(session = retry_session)
+
+        self.start_date = start_date
+        self.end_date = end_date
+
+        # needed to process the hourly data timestamp 
+        self.date_feature_extractor = DateFeatureExtractor()
+
+    def get_hourly_weather(self, station, latitude, longitude):
         # note: day_end has 1 extra day to handle daylight savings 
-        day_start = pd.Timestamp(start_date, tz = NYC_TIMEZONE)
-        day_end = pd.Timestamp(end_date, tz = NYC_TIMEZONE) + pd.DateOffset(days = 1)
+        day_start = pd.Timestamp(self.start_date, tz = NYC_TIMEZONE)
+        day_end = pd.Timestamp(self.end_date, tz = NYC_TIMEZONE) + pd.DateOffset(days = 1)
 
         # query
         params = {
@@ -110,18 +123,27 @@ class DatasetPreprocessor:
         ].reset_index(drop = True)
 
         # formatting to match back to the full dataset
-        hourly_data_df[HOUR_OF_DAY] = hourly_data_df[DATE].apply(self.to_hour_of_day)
-        hourly_data_df[DATE] = hourly_data_df[DATE].apply(self.to_date)
+        hourly_data_df[HOUR_OF_DAY] = hourly_data_df[DATE].apply(self.date_feature_extractor.to_hour_of_day)
+        hourly_data_df[DATE] = hourly_data_df[DATE].apply(self.date_feature_extractor.to_date)
         hourly_data_df[STATION] = station
         hourly_data_df[LATITUDE] = latitude
         hourly_data_df[LONGITUDE] = longitude
 
         return hourly_data_df
 
-    def fit_one_hot_encoder(self, features):
-        self.ohe.fit(features)
 
-    # do one hot encoding on categorical columns
+class FeaturePreprocessor:
+    '''
+    Functions for one-hot encoding and scaling. 
+    '''
+    def __init__(self):
+        # one-hot encoder and scaler
+        self.ohe = preprocessing.OneHotEncoder(drop='first', handle_unknown='ignore', sparse_output=False)
+        self.scaler = preprocessing.StandardScaler()
+
+    def fit_one_hot_encoder(self, categorical_features):
+        self.ohe.fit(categorical_features)
+
     def get_encoded_features_df(self, df, categorical_cols, non_categorical_cols):
         non_categorical_features = df[non_categorical_cols]
         categorical_features = pd.DataFrame(
@@ -131,6 +153,12 @@ class DatasetPreprocessor:
         )
         combined_features_df = pd.concat([categorical_features, non_categorical_features], axis=1)
         return combined_features_df
+
+    def save_one_hot_encoder(self, file_path):
+        save_to_pickle_file(self.ohe, file_path)
+
+    def load_one_hot_encoder(self, file_path):
+        self.ohe = read_pickle_file(file_path)
 
     def fit_scaler(self, df):
         self.scaler.fit(df)
