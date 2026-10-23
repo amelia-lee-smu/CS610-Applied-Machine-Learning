@@ -3,6 +3,7 @@ NYC_TIMEZONE = "America/New_York"
 
 # prediction 
 NUM_RENTALS = 'num_rentals' # target variable
+PREDICTION = 'prediction'
 
 # location features:
 STATION = "start station name"
@@ -43,3 +44,13 @@ NUMERICAL_COLUMNS = [
     TEMPERATURE, SNOW_DEPTH, CLOUD_COVER, CLOUD_COVER_MID, RELATIVE_HUMIDITY, PRECIPITATION, WIND_SPEED,
 ]
 OTHER_COLUMNS = [IS_PUBLIC_HOLIDAY]
+
+# expanding-window folds for cross-validation: (train start, train end, validation start, validation end)
+VALIDATION_FOLDS = [
+    ('2020-01-01', '2020-08-31', '2020-09-01', '2020-10-31'),
+    ('2020-01-01', '2020-10-31', '2020-11-01', '2020-12-31'),
+    ('2020-01-01', '2020-12-31', '2021-01-01', '2021-02-28'),
+]
+
+# fixed seed for Optuna
+OPTUNA_SEED = 42
