@@ -6,7 +6,6 @@ import openmeteo_requests
 import pandas as pd
 import requests_cache
 from retry_requests import retry
-from sklearn import preprocessing
 
 from utilities.values import *
 from utilities.utilities import *
@@ -130,43 +129,3 @@ class WeatherFeatureExtractor:
         hourly_data_df[LONGITUDE] = longitude
 
         return hourly_data_df
-
-
-class FeaturePreprocessor:
-    '''
-    Functions for one-hot encoding and scaling. 
-    '''
-    def __init__(self):
-        # one-hot encoder and scaler
-        self.ohe = preprocessing.OneHotEncoder(drop='first', handle_unknown='ignore', sparse_output=False)
-        self.scaler = preprocessing.StandardScaler()
-
-    def fit_one_hot_encoder(self, categorical_features):
-        self.ohe.fit(categorical_features)
-
-    def get_encoded_features_df(self, df, categorical_cols, non_categorical_cols):
-        non_categorical_features = df[non_categorical_cols]
-        categorical_features = pd.DataFrame(
-            self.ohe.transform(df[categorical_cols]),
-            columns=self.ohe.get_feature_names_out(categorical_cols),
-            index=df.index,
-        )
-        combined_features_df = pd.concat([categorical_features, non_categorical_features], axis=1)
-        return combined_features_df
-
-    def save_one_hot_encoder(self, file_path):
-        save_to_pickle_file(self.ohe, file_path)
-
-    def load_one_hot_encoder(self, file_path):
-        self.ohe = read_pickle_file(file_path)
-
-    def fit_scaler(self, df):
-        self.scaler.fit(df)
-
-    def get_scaled_features(self, df):
-        scaled_df = pd.DataFrame(
-            self.scaler.transform(df),
-            columns=self.scaler.get_feature_names_out(),
-            index=df.index,
-        )
-        return scaled_df

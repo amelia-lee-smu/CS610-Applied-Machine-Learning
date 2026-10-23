@@ -22,12 +22,9 @@ Run [notebooks/data_preprocessing.ipynb](notebooks/data_preprocessing.ipynb) fro
    - Date: week of year, day of week, hour of day, US public holiday flag.
    - Previous rental demand: T-2 and T-3 actual rental counts are used (i.e. 9am and 10am rental numbers).
    - Hourly weather data from the [Open-Meteo Historical API](https://open-meteo.com/en/docs/historical-weather-api): T-1 data is used (i.e. the latest data at 11am).
-3. **Split and encode**
+3. **Train-Validation and Test split**
    - Train-validation: 1 Jan 2020 – 28 Feb 2021 (combining for cross-validation in model training).
    - Test: 1 Mar – 30 Apr 2021
-   - Features that are one-hot encoded: station, hour of day and day of week. The model is saved at [models/one_hot_encoder.pkl](https://github.com/amelia-lee-smu/CS610-Applied-Machine-Learning/tree/feat/eda-for-proposal/models).
-   - Features that are sine and cosine encoded: week of year.
-   - Scaling will be done separately for each fold during training.
    - Processed data is stored in the [data/processed/](https://github.com/amelia-lee-smu/CS610-Applied-Machine-Learning/tree/feat/eda-for-proposal/data/processed) folder. 
 
 
