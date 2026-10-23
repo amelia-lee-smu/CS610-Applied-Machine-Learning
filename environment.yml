@@ -1,0 +1,11 @@
+name: applied-ml
+channels:
+  - defaults
+dependencies:
+  - pandas
+  - ipykernel
+  - scikit-learn
+  - matplotlib
+  - seaborn
+  - pyarrow
+  - holidays

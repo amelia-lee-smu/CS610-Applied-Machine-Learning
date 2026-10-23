@@ -1,0 +1,6 @@
+The forecasting design is sound. 
+Please clarify station selection and how zero-rental hours are constructed and finalize the forecasting granularity. 
+
+If feasible, use rolling validation to assess stability across periods, as the current validation and test sets cover only January–April 2021. 
+For example, train on January–August 2020 and validate on September–October, then expand the training window to January–October and validate on November–December. 
+Keep the March–April 2021 test set untouched for final evaluation.
