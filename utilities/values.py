@@ -54,3 +54,4 @@ VALIDATION_FOLDS = [
 
 # fixed seed for Optuna
 OPTUNA_SEED = 42
+RANDOM_SEED = 42
