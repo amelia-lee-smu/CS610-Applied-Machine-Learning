@@ -12,3 +12,4 @@ dependencies:
   - optuna
   - ipywidgets
   - lightgbm
+  - pytorch
