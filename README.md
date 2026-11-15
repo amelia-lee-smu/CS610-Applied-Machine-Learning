@@ -36,7 +36,7 @@ Each model has its own notebook and [model file](utilities/). They use the same
 [training functions](utilities/training.py) and the same 3 cross-validation folds:
 
 | Fold | Train | Validation |
-|---|---|---|
+|:---|:---|:---|
 | 1 | Jan – Aug 2020 | Sep – Oct 2020 |
 | 2 | Jan – Oct 2020 | Nov – Dec 2020 |
 | 3 | Jan – Dec 2020 | Jan – Feb 2021 |
@@ -56,7 +56,7 @@ In each notebook, we do:
 ## 3. Ensemble
 4 approaches were tested to combine the base learner predictions: 
 | Approach | Description |
-|---|---|
+|:---|:---|
 | Equal arithmetic mean | Simple average, so every model counts equally (0.25 each) |
 | Weighted arithmetic mean | Weighted average; the weights are learned, non-negative and sum to 1 |
 | Weighted geometric mean (selected) | Weighted average on the log scale; the weights are learned, non-negative and sum to 1 |
@@ -67,7 +67,7 @@ Only the selected model and the baselines are displayed here for brevity.
 Against the 4-week average, the ensemble's test MAE is 1.7% lower and its RMSE is 8.7% lower. This suggests that it has corrected the larger errors. 
 
 | Method | Validation Poisson deviance (Folds 2–3) | Test MAE | Test RMSE | Test Poisson deviance |
-|---|---|---|---|---|
+|:---|:---|:---|:---|:---|
 | Ensemble (weighted geometric mean), selected | 0.7359 | 0.5027 | 0.9492 | 0.9403 |
 | Baseline (4-week average) | – | 0.5112 | 1.0401 | 1.7994 |
 | Baseline (previous week) | – | 0.6069 | 1.3002 | 3.6766 |
@@ -76,7 +76,7 @@ Against the 4-week average, the ensemble's test MAE is 1.7% lower and its RMSE i
 However, the benefits are more pronounced where demand matters the most:
 
 | Test subset | Station-hours | MAE vs 4-week average | RMSE vs 4-week average |
-|---|---|---|---|
+|:---|:---|:---|:---|
 | Non-zero hours| 21,145 | 7.3% lower | 7.7% lower |
 | Top 10 busiest stations | 14,580 | 8.2% lower | 10.5% lower |
 | Weekend peaks (12:00–18:00) | 4,896 | 14.5% lower | 17.2% lower |
