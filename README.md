@@ -2,6 +2,9 @@
 
 Hourly rental demand forecasting for 51 NYC Citi Bike stations (Jan 2020 – Apr 2021).
 
+We forecast the number of rental starts at each station in the next hour. Four base models (Poisson Regression,
+Random Forest, LightGBM and a neural network) and four ensemble approaches were compared against two historical naive baselines. The **weighted geometric mean ensemble** model was selected as the final model.
+
 ## Installation
 
 ```bash
@@ -10,53 +13,79 @@ conda activate applied-ml
 pip install openmeteo-requests requests-cache retry-requests   # for weather API
 ```
 
-## Data preprocessing
+## 1. Data preprocessing
 
-Run [notebooks/data_preprocessing.ipynb](notebooks/data_preprocessing.ipynb) from top to bottom. A brief summary of the steps taken:
+Run [notebooks/data_preprocessing.ipynb](notebooks/data_preprocessing.ipynb) from top to bottom.
 
 1. **Rental counts**
+   - Duplicate trips are removed, and the depot (`JCBS Depot`) is excluded.
    - Trips are counted per station per hour, on a complete station × date × hour grid. Hours with no trips are 0.
-   - The depot (`JCBS Depot`) is excluded.
 2. **Features**
-   - Note: we are assuming that the prediction will be done 1 hour earlier. For example, the prediction of 12 noon's demand will be done at 11am. 
+   - We assume that forecasts are made 1 hour prior. For example, 12:00's demand is forecasted at 11:00.
    - Date: week of year, day of week, hour of day, US public holiday flag.
-   - Previous rental demand: T-2 and T-3 actual rental counts are used (i.e. 9am and 10am rental numbers).
-   - Hourly weather data from the [Open-Meteo Historical API](https://open-meteo.com/en/docs/historical-weather-api): T-1 data is used (i.e. the latest data at 11am).
-3. **Train-Validation and Test split**
-   - Train-validation: 1 Jan 2020 – 28 Feb 2021 (combining for cross-validation in model training).
-   - Test: 1 Mar – 30 Apr 2021
-   - Processed data is stored in the [data/processed/](https://github.com/amelia-lee-smu/CS610-Applied-Machine-Learning/tree/feat/eda-for-proposal/data/processed) folder. 
+   - Previous rental demand: T-2 and T-3 complete hourly rental counts (i.e. the 09:00 to 11:00).
+   - Hourly weather features from the [Open-Meteo Historical API](https://open-meteo.com/en/docs/historical-weather-api):
+     T-1 values (i.e. the observed weather features at 11:00).
+3. **Train-validation and test split**
+   - Train-validation: 1 Jan 2020 – 28 Feb 2021, used for 3-folds time series cross-validation.
+   - Test: 1 Mar – 30 Apr 2021, used only for the final evaluation.
 
+## 2. Model training
 
-## Model training
+Each model has its own notebook and [model file](utilities/). They use the same
+[training functions](utilities/training.py) and the same 3 cross-validation folds:
 
-Each model has its own [notebook](notebooks/) and [model file](utilities/). They use the same [training functions](utilities/training.py) and [cross-validation splits](utilities/values.py).
+| Fold | Train | Validation |
+|---|---|---|
+| 1 | Jan – Aug 2020 | Sep – Oct 2020 |
+| 2 | Jan – Oct 2020 | Nov – Dec 2020 |
+| 3 | Jan – Dec 2020 | Jan – Feb 2021 |
 
-In each model's notebook, we do:
+In each notebook, we do:
+
 1. **Hyperparameter tuning with Optuna**
    - Optuna searches for the hyperparameters with the lowest mean Poisson deviance across the 3 folds.
    - MAE and RMSE are recorded for every trial as well.
-3. **Prediction on the validation set (for the ensemble model)**
-   - With the best hyperparameters, a new model is trained on each fold's train set.
-   - The model is then used for prediction on the fold's validation set. The output is saved to `data/predictions/validation_<model>_fold<1-3>.parquet`.
-4. **Final model and test predictions**
-   - A new model is trained on the full train and validation set, and saved to `models/<model>_model.pkl`.
-   - Predictions on the test sets is saved to `data/predictions/test_<model>.parquet`.
+2. **Validation predictions (for the ensemble)**
+   - With the best hyperparameters, a new model is trained on each fold's train set and predicts that fold's
+     validation set.
+3. **Final model and test predictions**
+   - A new model is trained on the full train-validation set and saved.
+   - Its test predictions are saved too.
 
+## 3. Ensemble
+4 approaches were tested to combine the base learner predictions: 
+| Approach | Description |
+|---|---|
+| Equal arithmetic mean | Simple average, so every model counts equally (0.25 each) |
+| Weighted arithmetic mean | Weighted average; the weights are learned, non-negative and sum to 1 |
+| Weighted geometric mean (selected) | Weighted average on the log scale; the weights are learned, non-negative and sum to 1 |
+| Poisson stacking | Poisson regression on the models' log predictions; the weights need not sum to 1 |
 
-## Ensemble
+## 4. Results
+Only the selected model and the baselines are displayed here for brevity.
+Against the 4-week average, the ensemble's test MAE is 1.7% lower and its RMSE is 8.7% lower. This suggests that it has corrected the larger errors. 
 
-Run [train_ensemble_colab.ipynb](notebooks/train_ensemble_colab.ipynb) on Google Colab after all 4 models are trained.
+| Method | Validation Poisson deviance (Folds 2–3) | Test MAE | Test RMSE | Test Poisson deviance |
+|---|---|---|---|---|
+| Ensemble (weighted geometric mean), selected | 0.7359 | 0.5027 | 0.9492 | 0.9403 |
+| Baseline (4-week average) | – | 0.5112 | 1.0401 | 1.7994 |
+| Baseline (previous week) | – | 0.6069 | 1.3002 | 3.6766 |
+<br>
 
-1. The ensemble model learns how to combine their saved validation and test predictions.
-2. 4 ways of combining the models are compared: simple average, weighted average, weighted geometric average and stacking (a Poisson regression on the models' log predictions).
-3. Each method is scored leave-one-fold-out: it learns its weights on 2 of the 3 validation folds and is scored on the third. The method with the lowest mean Poisson deviance is chosen.
-4. The chosen method learns its final weights on all 3 validation folds, then combines the models' test predictions. Saved to `models/ensemble_model.pkl` and `data/predictions/test_ensemble.parquet`.
-5. The test set is scored once, at the end of this notebook: each model, every ensemble method and the chosen ensemble.
+However, the benefits are more pronounced where demand matters the most:
 
+| Test subset | Station-hours | MAE vs 4-week average | RMSE vs 4-week average |
+|---|---|---|---|
+| Non-zero hours| 21,145 | 7.3% lower | 7.7% lower |
+| Top 10 busiest stations | 14,580 | 8.2% lower | 10.5% lower |
+| Weekend peaks (12:00–18:00) | 4,896 | 14.5% lower | 17.2% lower |
+| Weekday peaks (07:00–09:00, 16:00–20:00) | 13,770 | 0.2% lower | 5.5% lower |
+
+The full table for every model and ensemble method is produced by
+[notebooks/results_reporting.ipynb](notebooks/results_reporting.ipynb).
 
 ## Team members (Group 1)
-
 - Alessandro Pagan
 - Alice Agazzi
 - Lee Jing Hua Amelia
